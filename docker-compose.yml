@@ -1,35 +1,53 @@
-version: '3.8'
-
 services:
   db:
-    image: mysql:8
-    restart: always
+    image: mysql:8.0
     environment:
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: bookstore
-      MYSQL_USER: bookstore_user
-      MYSQL_PASSWORD: bookstore_pass
-      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
     ports:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-    networks:
-      - bookstore_net
+    healthcheck:
+      test: ["CMD", "mysqladmin","ping","-uuser","-ppassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  flaskapp:
-    build: .
-    restart: always
+  auth_service:
+    build: ./auth_service
     environment:
-      - FLASK_ENV=development
-    ports:
-      - "3000:5000"
+      - DATABASE_URI=mysql+pymysql://user:password@db/bookstore
     depends_on:
-      - db
-    networks:
-      - bookstore_net
+      db:
+        condition: service_healthy
+    ports:
+      - "5001:5001"
+
+  catalog_service:
+    build: ./catalog_service
+    environment:
+      - DATABASE_URI=mysql+pymysql://user:password@db/bookstore
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5002:5002"
+
+  order_service:
+    build: ./order_service
+    environment:
+      - DATABASE_URI=mysql+pymysql://user:password@db/bookstore
+      - AUTH_URL=http://auth_service:5001
+    depends_on:
+      auth_service:
+        condition: service_started
+      db:
+        condition: service_healthy
+    ports:
+      - "5003:5003"
 
 volumes:
   db_data:
-
-networks:
-  bookstore_net:
