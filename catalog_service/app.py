@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify
 from flasgger import Swagger
-from models import db, Book
+from models.book import db, Book
 
 DB_URI = os.environ.get("DATABASE_URI", "mysql+pymysql://user:password@db/bookstore")
 
@@ -48,7 +48,6 @@ def get_books():
               description: {type: string}
               price: {type: number}
               stock: {type: integer}
-              seller_id: {type: integer}
     """
     books = Book.query.all()
     result = []
@@ -59,8 +58,7 @@ def get_books():
             "author": b.author,
             "description": b.description,
             "price": b.price,
-            "stock": b.stock,
-            "seller_id": b.seller_id
+            "stock": b.stock
         })
     return jsonify(result)
 
