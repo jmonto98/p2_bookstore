@@ -2,9 +2,9 @@ import os
 import datetime
 import jwt
 from flask import Flask, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flasgger import Swagger
+from models.user import User, db
 
 # ------------------------------------------------------
 #  Configuración base de la aplicación
@@ -23,16 +23,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://user:password@db/bookst
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecretkey")
 
-db = SQLAlchemy(app)
-
-# ------------------------------------------------------
-#  Modelo de usuario
-# ------------------------------------------------------
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150))
-    email = db.Column(db.String(150), unique=True)
-    password = db.Column(db.String(200))
+db.init_app(app)
 
 with app.app_context():
     db.create_all()
