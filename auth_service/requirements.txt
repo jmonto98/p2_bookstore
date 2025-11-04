@@ -1,5 +1,7 @@
+flasgger
 flask
 flask_sqlalchemy
+pyjwt
 pymysql
 werkzeug
-flasgger
+

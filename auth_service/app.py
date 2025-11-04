@@ -1,3 +1,6 @@
+import os
+import datetime
+import jwt
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,14 +14,14 @@ app = Flask(__name__)
 swagger = Swagger(app, template={
     "info": {
         "title": "Auth Service API",
-        "description": "Endpoints para autenticación de usuarios",
-        "version": "1.0.0"
+        "description": "Microservicio de autenticación con JWT",
+        "version": "2.0.0"
     }
 })
 
-
 app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://user:password@db/bookstore"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecretkey")
 
 db = SQLAlchemy(app)
 
@@ -31,9 +34,40 @@ class User(db.Model):
     email = db.Column(db.String(150), unique=True)
     password = db.Column(db.String(200))
 
-# Crear las tablas si no existen
 with app.app_context():
     db.create_all()
+
+# ------------------------------------------------------
+#  Almacenamiento temporal de tokens invalidados (logout)
+# ------------------------------------------------------
+blacklist = set()
+
+# ------------------------------------------------------
+#  Funciones auxiliares
+# ------------------------------------------------------
+def create_token(user):
+    """Generar un token JWT con expiración"""
+    payload = {
+        "user_id": user.id,
+        "email": user.email,
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=4)
+    }
+    token = jwt.encode(payload, app.config["SECRET_KEY"], algorithm="HS256")
+    return token
+
+
+def decode_token(token):
+    """Decodificar y validar un token JWT"""
+    try:
+        if token in blacklist:
+            return None, "Token invalidado"
+        payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        return payload, None
+    except jwt.ExpiredSignatureError:
+        return None, "Token expirado"
+    except jwt.InvalidTokenError:
+        return None, "Token inválido"
+
 
 # ------------------------------------------------------
 #  Rutas y endpoints
@@ -92,7 +126,7 @@ def register_user():
 @app.route("/login", methods=["POST"])
 def login_user():
     """
-    Iniciar sesión
+    Iniciar sesión y obtener JWT
     ---
     tags:
       - Autenticación
@@ -124,16 +158,14 @@ def login_user():
     if not user or not check_password_hash(user.password, data["password"]):
         return jsonify({"error": "credenciales inválidas"}), 401
 
-    return jsonify({
-        "message": "login exitoso",
-        "user": {"id": user.id, "email": user.email, "name": user.name}
-    }), 200
+    token = create_token(user)
+    return jsonify({"message": "login exitoso", "token": token}), 200
 
 
 @app.route("/validate", methods=["POST"])
-def validate_user():
+def validate_token():
     """
-    Validar credenciales (usado por otros microservicios)
+    Validar token JWT
     ---
     tags:
       - Autenticación
@@ -141,13 +173,13 @@ def validate_user():
       - in: body
         name: body
         required: true
+        description: Token JWT a validar
         schema:
           type: object
           properties:
-            email:
+            token:
               type: string
-            password:
-              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
     responses:
       200:
         description: Usuario válido
@@ -155,10 +187,61 @@ def validate_user():
         description: Credenciales incorrectas
     """
     data = request.json
-    user = User.query.filter_by(email=data.get("email")).first()
-    if user and check_password_hash(user.password, data.get("password", "")):
-        return jsonify({"valid": True, "user_id": user.id}), 200
-    return jsonify({"valid": False}), 401
+    token = data.get("token")
+    if not token:
+        return jsonify({"error": "token requerido"}), 400
+
+    payload, error = decode_token(token)
+    if error:
+        return jsonify({"valid": False, "error": error}), 401
+
+    return jsonify({"valid": True, "user": {"id": payload["user_id"], "email": payload["email"]}}), 200
+
+
+@app.route("/logout", methods=["POST"])
+def logout_user():
+    """
+    Invalidar token JWT (logout)
+    ---
+    tags:
+      - Autenticación
+    parameters:
+      - in: body
+        name: body
+        required: true
+        description: Token JWT a invalidar
+        schema:
+          type: object
+          properties:
+            token:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    responses:
+      200:
+        description: Logout exitoso, token invalidado
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "logout exitoso"
+      400:
+        description: Token no proporcionado
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: "token requerido"
+    """
+    data = request.json
+    token = data.get("token")
+    if not token:
+        return jsonify({"error": "token requerido"}), 400
+
+    # Agregar token a la blacklist
+    blacklist.add(token)
+    return jsonify({"message": "logout exitoso"}), 200
 
 
 # ------------------------------------------------------
