@@ -1,7 +1,9 @@
-flasgger
-flask
-flask_sqlalchemy
-pyjwt
-pymysql
-werkzeug
-
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+flasgger==0.9.7.1
+PyMySQL==1.1.1
+Werkzeug==3.0.3
+requests==2.32.3
+python-dotenv==1.0.1
+pyjwt==2.8.0
+cryptography

@@ -1,53 +1,129 @@
 services:
-  db:
+  # =============================
+  # Base de datos Auth Service
+  # =============================
+  db_auth:
     image: mysql:8.0
+    container_name: auth_db
+    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: bookstore
+      MYSQL_DATABASE: bookstore_auth
       MYSQL_USER: user
       MYSQL_PASSWORD: password
-    ports:
-      - "3306:3306"
     volumes:
-      - db_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin","ping","-uuser","-ppassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - db_auth_data:/var/lib/mysql
+    networks:
+      - bookstore_network
 
+  # =============================
+  # Base de datos Catalog Service
+  # =============================
+  db_catalog:
+    image: mysql:8.0
+    container_name: catalog_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bookstore_catalog
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - db_catalog_data:/var/lib/mysql
+    networks:
+      - bookstore_network
+
+  # =============================
+  # Base de datos Purchase Service
+  # =============================
+  db_main:
+    image: mysql:8.0
+    container_name: main_bd
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bookstore_main
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - db_main_data:/var/lib/mysql
+    networks:
+      - bookstore_network
+
+  # =============================
+  # RabbitMQ para sincronización
+  # =============================
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"      # puerto AMQP
+      - "15672:15672"    # panel de administración web
+    networks:
+      - bookstore_network
+
+  # =============================
+  # Auth Service
+  # =============================
   auth_service:
     build: ./auth_service
-    environment:
-      - DATABASE_URI=mysql+pymysql://user:password@db/bookstore
+    container_name: auth_service
+    restart: always
     depends_on:
-      db:
-        condition: service_healthy
+      - db_auth
+    environment:
+      - DATABASE_URI=mysql+pymysql://user:password@db_auth/bookstore_auth
     ports:
       - "5001:5001"
+    networks:
+      - bookstore_network
 
+  # =============================
+  # Catalog Service
+  # =============================
   catalog_service:
     build: ./catalog_service
-    environment:
-      - DATABASE_URI=mysql+pymysql://user:password@db/bookstore
+    container_name: catalog_service
+    restart: always
     depends_on:
-      db:
-        condition: service_healthy
+      - db_catalog
+      - rabbitmq
+    environment:
+      - DATABASE_URI=mysql+pymysql://user:password@db_catalog/bookstore_catalog
+      - RABBITMQ_HOST=rabbitmq
     ports:
       - "5002:5002"
+    networks:
+      - bookstore_network
 
-  order_service:
-    build: ./order_service
-    environment:
-      - DATABASE_URI=mysql+pymysql://user:password@db/bookstore
-      - AUTH_URL=http://auth_service:5001
+  # =============================
+  # Purchase Service
+  # =============================
+  purchase_service:
+    build: ./purchase_service
+    container_name: purchase_service
+    restart: always
     depends_on:
-      auth_service:
-        condition: service_started
-      db:
-        condition: service_healthy
+      - db_main
+      - rabbitmq
+    environment:
+      - DATABASE_URI=mysql+pymysql://user:password@db_main/bookstore_main
+      - AUTH_URL=http://auth_service:5001/validate
+      - RABBITMQ_HOST=rabbitmq
     ports:
       - "5003:5003"
+    networks:
+      - bookstore_network
 
+# =============================
+# Volúmenes y red
+# =============================
 volumes:
-  db_data:
+  db_auth_data:
+  db_catalog_data:
+  db_main_data:
+
+networks:
+  bookstore_network:
+    driver: bridge

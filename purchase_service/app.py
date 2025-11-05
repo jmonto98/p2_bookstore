@@ -1,3 +1,4 @@
+import pika, json, os
 import requests
 from flask import Flask, jsonify, request
 from flasgger import Swagger
@@ -14,14 +15,25 @@ from models.delivery_assignment import DeliveryAssignment
 app = Flask(__name__)
 Swagger(app)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://user:password@db/bookstore"
+app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://user:password@db_main/bookstore_main"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 AUTH_URL = "http://auth_service:5001/validate"
+RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
 
 db.init_app(app)
 
 with app.app_context():
     db.create_all()
+    
+
+def notify_catalog(event_type, payload):
+    """Envía eventos al catálogo a través de RabbitMQ."""
+    connection = pika.BlockingConnection(pika.ConnectionParameters(RABBITMQ_HOST))
+    channel = connection.channel()
+    channel.queue_declare(queue="book_updates")
+    message = {"event": event_type, "data": payload}
+    channel.basic_publish(exchange="", routing_key="book_updates", body=json.dumps(message))
+    connection.close()
 
 # ------------------------------------------------------
 # Helper: Validación de token JWT
@@ -124,6 +136,16 @@ def add_book():
     book = Book(**data)
     db.session.add(book)
     db.session.commit()
+
+    notify_catalog("book_created", {
+        "id": book.id,
+        "title": book.title,
+        "author": book.author,
+        "description": book.description,
+        "price": book.price,
+        "stock": book.stock
+    })
+
     return jsonify({"message": "Libro agregado", "book_id": book.id}), 201
 
 @app.route("/books/<int:id>", methods=["PUT"])
@@ -160,6 +182,16 @@ def update_book(id):
     for key, value in request.json.items():
         setattr(book, key, value)
     db.session.commit()
+    
+    notify_catalog("book_updated", {
+        "id": book.id,
+        "title": book.title,
+        "author": book.author,
+        "description": book.description,
+        "price": book.price,
+        "stock": book.stock      
+    })
+    
     return jsonify({"message": "Libro actualizado"})
 
 @app.route("/books/<int:id>", methods=["DELETE"])
