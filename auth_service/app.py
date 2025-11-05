@@ -4,7 +4,8 @@ import jwt
 from flask import Flask, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flasgger import Swagger
-from models.user import User, db
+from models import db
+from models.user import User
 
 # ------------------------------------------------------
 #  Configuración base de la aplicación
