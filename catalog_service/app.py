@@ -1,7 +1,8 @@
 import os
 from flask import Flask, jsonify
 from flasgger import Swagger
-from models.book import db, Book
+from models import db
+from models.book import Book
 
 DB_URI = os.environ.get("DATABASE_URI", "mysql+pymysql://user:password@db/bookstore")
 
