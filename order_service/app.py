@@ -246,6 +246,7 @@ def list_purchases():
     purchases = Purchase.query.all()
     return jsonify([
         {"id": p.id, "user_id": p.user_id, "book_id": p.book_id,
+         "book_name": Book.query.get(p.book_id).title if Book.query.get(p.book_id) else "",
          "quantity": p.quantity, "total_price": p.total_price,
          "status": p.status} for p in purchases
     ])
