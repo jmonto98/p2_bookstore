@@ -4,7 +4,7 @@ services:
   # =============================
   db_auth:
     image: mysql:8.0
-    container_name: auth_db
+    container_name: db_auth
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -21,7 +21,7 @@ services:
   # =============================
   db_catalog:
     image: mysql:8.0
-    container_name: catalog_db
+    container_name: db_catalog
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -38,7 +38,7 @@ services:
   # =============================
   db_main:
     image: mysql:8.0
-    container_name: main_bd
+    container_name: db_main
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root

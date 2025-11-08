@@ -28,26 +28,69 @@ with app.app_context():
     db.create_all()
 
 def consume_book_updates():
-    connection = pika.BlockingConnection(pika.ConnectionParameters(RABBITMQ_HOST))
-    channel = connection.channel()
-    channel.queue_declare(queue="book_updates")
+    import time
+    with app.app_context():
 
-    def callback(ch, method, properties, body):
-        msg = json.loads(body)
-        data = msg["data"]
-        book = Book.query.get(data["id"])
-        if not book:
-            book = Book(**data)
-            db.session.add(book)
-        else:
-            for k, v in data.items():
-                setattr(book, k, v)
-        db.session.commit()
-        print(f"[SYNC] Catálogo actualizado: {data['title']}")
+        # ============================
+        # Intentar conexión hasta lograrlo
+        # ============================
+        while True:
+            try:
+                print(f"[Catalog Service] Intentando conectar a RabbitMQ en {RABBITMQ_HOST}...")
+                connection = pika.BlockingConnection(
+                    pika.ConnectionParameters(host=RABBITMQ_HOST)
+                )
+                print("[Catalog Service] ✅ Conectado a RabbitMQ")
+                break
+            except pika.exceptions.AMQPConnectionError:
+                print("[Catalog Service] ❌ RabbitMQ no disponible, reintentando en 3s...")
+                time.sleep(3)
 
-    channel.basic_consume(queue="book_updates", on_message_callback=callback, auto_ack=True)
-    print("📡 Esperando eventos de RabbitMQ...")
-    channel.start_consuming()
+        # ============================
+        # Configurar canal y cola
+        # ============================
+        channel = connection.channel()
+        channel.queue_declare(queue="book_updates")
+
+        print("📡 [Catalog Service] Esperando eventos de RabbitMQ...")
+
+        # ============================
+        # Callback de consumo
+        # ============================
+        def callback(ch, method, properties, body):
+            print(f"[Catalog Service] 🔔 Mensaje recibido: {body}")
+
+            msg = json.loads(body)
+            data = msg["data"]
+
+            # Crear o actualizar libro
+            book = Book.query.get(data["id"])
+            if not book:
+                book = Book(**data)
+                db.session.add(book)
+                action = "CREATED"
+            else:
+                for k, v in data.items():
+                    setattr(book, k, v)
+                action = "UPDATED"
+
+            db.session.commit()
+            print(f"[Catalog Service] ✅ Libro {action}: {data['title']}")
+
+        # ============================
+        # Iniciar consumo
+        # ============================
+        channel.basic_consume(
+            queue="book_updates",
+            on_message_callback=callback,
+            auto_ack=True
+        )
+
+        try:
+            channel.start_consuming()
+        except Exception as e:
+            print(f"[Catalog Service] ❌ Error durante el consumo: {e}")
+
 
 # Lanza el consumidor en un hilo paralelo
 threading.Thread(target=consume_book_updates, daemon=True).start()
