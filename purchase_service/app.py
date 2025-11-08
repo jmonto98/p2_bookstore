@@ -221,48 +221,106 @@ def delete_book(id):
 # ==================== COMPRAS =========================
 # ======================================================
 @app.route("/purchase", methods=["POST"])
-def create_purchase():
+def make_purchase():
     """
-    Crear una nueva compra
+    Crear una compra
     ---
     tags:
       - Compras
     parameters:
       - in: header
         name: Authorization
+        description: Token JWT del usuario
         required: true
         type: string
-        description: Token JWT (Bearer <token>)
       - in: body
         name: body
+        required: true
         schema:
           type: object
-          required: [book_id, quantity, total_price]
+          required:
+            - book_id
+            - quantity
           properties:
-            book_id: {type: integer}
-            quantity: {type: integer}
-            total_price: {type: number}
+            book_id:
+              type: integer
+            quantity:
+              type: integer
     responses:
       201:
         description: Compra creada correctamente
+      400:
+        description: Datos inválidos o stock insuficiente
       401:
-        description: Usuario no autorizado
+        description: Token inválido o usuario no autorizado
     """
-    user, error, status = validate_jwt(request)
-    if not user:
-        return jsonify(error), status
 
     data = request.json
-    purchase = Purchase(
-        user_id=user["id"],
-        book_id=data["book_id"],
-        quantity=data.get("quantity", 1),
-        total_price=data.get("total_price", 0),
-        status="Pending"
+
+    if not data or "book_id" not in data or "quantity" not in data:
+        return jsonify({"error": "book_id y quantity son requeridos"}), 400
+
+    book_id = data["book_id"]
+    quantity = data["quantity"]
+
+    # ========= VALIDAR TOKEN CON AUTH_SERVICE ==========
+    token = request.headers.get("Authorization")
+
+    if not token:
+        return jsonify({"error": "Token requerido"}), 401
+
+    validate_resp = requests.post(
+        f"{AUTH_URL}",
+        json={"token": token}
     )
-    db.session.add(purchase)
+
+    if validate_resp.status_code != 200:
+        return jsonify({"error": "Token inválido"}), 401
+
+    validate_json = validate_resp.json()
+    user_id = validate_json["user"]["id"]
+
+    # ========== CONSULTAR LIBRO ========================
+    book = Book.query.get(book_id)
+
+    if not book:
+        return jsonify({"error": "Libro no encontrado"}), 404
+
+    if book.stock < quantity:
+        return jsonify({
+            "error": "No hay suficiente stock disponible",
+            "stock_actual": book.stock
+        }), 400
+
+    # ========== CALCULAR TOTAL =========================
+    total_price = book.price * quantity
+
+    # ========== CREAR PURCHASE =========================
+    new_purchase = Purchase(
+        user_id=user_id,
+        book_id=book_id,
+        quantity=quantity,
+        total_price=total_price,
+        status="Pending Payment"
+    )
+
+    # ========== ACTUALIZAR STOCK =======================
+    book.stock -= quantity
+
+    db.session.add(new_purchase)
     db.session.commit()
-    return jsonify({"message": "Compra creada", "purchase_id": purchase.id}), 201
+
+    notify_catalog("book_updated", {
+    "id": book.id,
+    "stock": book.stock      
+    })
+
+    return jsonify({
+        "message": "Compra creada",
+        "purchase_id": new_purchase.id,
+        "total_price": total_price,
+        "remaining_stock": book.stock
+    }), 201
 
 @app.route("/purchases", methods=["GET"])
 def list_purchases():
@@ -363,7 +421,7 @@ def create_payment():
     payment = Payment(
         purchase_id=data["purchase_id"],
         amount=data["amount"],
-        payment_method=data["method"],
+        payment_method=data["payment_method"],
         payment_status="Completed"
     )
     db.session.add(payment)
