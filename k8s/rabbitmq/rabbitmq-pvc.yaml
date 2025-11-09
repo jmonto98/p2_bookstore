@@ -9,4 +9,4 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  volumeName: pv-mysql-auth
+  volumeName: pv-rabbitmq
