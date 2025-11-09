@@ -20,7 +20,7 @@ swagger = Swagger(app, template={
     }
 })
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://user:password@db_auth/bookstore_auth"
+app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://user:password@db-auth/bookstore_auth"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecretkey")
 

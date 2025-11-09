@@ -2,9 +2,9 @@ services:
   # =============================
   # Base de datos Auth Service
   # =============================
-  db_auth:
+  db-auth:
     image: mysql:8.0
-    container_name: db_auth
+    container_name: db-auth
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -19,9 +19,9 @@ services:
   # =============================
   # Base de datos Catalog Service
   # =============================
-  db_catalog:
+  db-catalog:
     image: mysql:8.0
-    container_name: db_catalog
+    container_name: db-catalog
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -36,9 +36,9 @@ services:
   # =============================
   # Base de datos Purchase Service
   # =============================
-  db_main:
+  db-main:
     image: mysql:8.0
-    container_name: db_main
+    container_name: db-main
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -71,9 +71,9 @@ services:
     container_name: auth_service
     restart: always
     depends_on:
-      - db_auth
+      - db-auth
     environment:
-      - DATABASE_URI=mysql+pymysql://user:password@db_auth/bookstore_auth
+      - DATABASE_URI=mysql+pymysql://user:password@db-auth/bookstore_auth
     ports:
       - "5001:5001"
     networks:
@@ -87,10 +87,10 @@ services:
     container_name: catalog_service
     restart: always
     depends_on:
-      - db_catalog
+      - db-catalog
       - rabbitmq
     environment:
-      - DATABASE_URI=mysql+pymysql://user:password@db_catalog/bookstore_catalog
+      - DATABASE_URI=mysql+pymysql://user:password@db-catalog/bookstore_catalog
       - RABBITMQ_HOST=rabbitmq
     ports:
       - "5002:5002"
@@ -105,10 +105,10 @@ services:
     container_name: purchase_service
     restart: always
     depends_on:
-      - db_main
+      - db-main
       - rabbitmq
     environment:
-      - DATABASE_URI=mysql+pymysql://user:password@db_main/bookstore_main
+      - DATABASE_URI=mysql+pymysql://user:password@db-main/bookstore_main
       - AUTH_URL=http://auth_service:5001/validate
       - RABBITMQ_HOST=rabbitmq
     ports:

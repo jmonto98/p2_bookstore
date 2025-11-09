@@ -6,7 +6,7 @@ from flasgger import Swagger
 from models import db
 from models.book import Book
 
-DB_URI = os.environ.get("DATABASE_URI", "mysql+pymysql://user:password@db_catalog/bookstore_catalog")
+DB_URI = os.environ.get("DATABASE_URI", "mysql+pymysql://user:password@db-catalog/bookstore_catalog")
 
 app = Flask(__name__)
 
@@ -18,7 +18,7 @@ swagger = Swagger(app, template={
     }
 })
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://user:password@db_catalog/bookstore_catalog"
+app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://user:password@db-catalog/bookstore_catalog"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
 
