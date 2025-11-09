@@ -215,6 +215,11 @@ def delete_book(id):
         return jsonify({"error": "libro no encontrado"}), 404
     db.session.delete(book)
     db.session.commit()
+    
+    notify_catalog("book_deleted", {
+    "id": book.id
+    })
+    
     return jsonify({"message": "Libro eliminado"})
 
 # ======================================================
