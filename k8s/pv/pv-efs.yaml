@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mysql-auth
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: fs-05d8b8218b7362010.efs.us-east-1.amazonaws.com
+    path: "/mysql-auth"
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mysql-catalog
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: fs-05d8b8218b7362010.efs.us-east-1.amazonaws.com
+    path: "/mysql-catalog"
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mysql-main
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: fs-05d8b8218b7362010.efs.us-east-1.amazonaws.com
+    path: "/mysql-main"
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-rabbitmq
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: fs-05d8b8218b7362010.efs.us-east-1.amazonaws.com
+    path: "/rabbitmq"
+  persistentVolumeReclaimPolicy: Retain
