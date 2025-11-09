@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-main
+  namespace: bookstore
+spec:
+  selector:
+    app: db-main
+  ports:
+    - port: 3306
+      targetPort: 3306
+  type: ClusterIP

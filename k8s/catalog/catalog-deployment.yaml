@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-service
+  namespace: bookstore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog-service
+  template:
+    metadata:
+      labels:
+        app: catalog-service
+    spec:
+      containers:
+        - name: catalog-service
+          image: 637423500122.dkr.ecr.us-east-1.amazonaws.com/bookstore/catalog_service:latest
+          ports:
+            - containerPort: 5002
+          env:
+            - name: DATABASE_URI
+              value: "mysql+pymysql://user:password@db-catalog/bookstore_catalog"
+            - name: RABBITMQ_HOST
+              value: "rabbitmq"

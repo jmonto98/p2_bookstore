@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-main
+  namespace: bookstore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-main
+  template:
+    metadata:
+      labels:
+        app: db-main
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "password"
+            - name: MYSQL_USER
+              value: "user"
+            - name: MYSQL_PASSWORD
+              value: "password"
+            - name: MYSQL_DATABASE
+              value: "bookstore_main"
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: mysql-main-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-main-storage
+          persistentVolumeClaim:
+            claimName: mysql-main-pvc

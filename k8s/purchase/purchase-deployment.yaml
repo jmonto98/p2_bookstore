@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: purchase-service
+  namespace: bookstore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: purchase-service
+  template:
+    metadata:
+      labels:
+        app: purchase-service
+    spec:
+      containers:
+        - name: purchase-service
+          image: 637423500122.dkr.ecr.us-east-1.amazonaws.com/bookstore/purchase_service:latest
+          ports:
+            - containerPort: 5003
+          env:
+            - name: DATABASE_URI
+              value: "mysql+pymysql://user:password@db-main/bookstore_main"
+            - name: RABBITMQ_HOST
+              value: "rabbitmq"
+            - name: AUTH_URL
+              value: "http://auth-service:5001/validate"
