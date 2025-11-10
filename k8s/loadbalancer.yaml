@@ -1,19 +1,24 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: bookstore-gateway
+  name: bookstore-lb
   namespace: bookstore
+  labels:
+    app: bookstore
 spec:
   type: LoadBalancer
   ports:
     - name: auth
       port: 80
       targetPort: 5001
+      protocol: TCP
     - name: catalog
       port: 81
       targetPort: 5002
+      protocol: TCP
     - name: purchase
       port: 82
       targetPort: 5003
+      protocol: TCP
   selector:
-    app: auth-service
+    app: auth-service 
