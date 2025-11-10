@@ -16,6 +16,7 @@ spec:
       containers:
         - name: purchase-service
           image: 637423500122.dkr.ecr.us-east-1.amazonaws.com/bookstore/purchase_service:latest
+          imagepullpolicy: Always
           ports:
             - containerPort: 5003
           env:

@@ -16,6 +16,7 @@ spec:
       containers:
         - name: catalog-service
           image: 637423500122.dkr.ecr.us-east-1.amazonaws.com/bookstore/catalog_service:latest
+          imagepullpolicy: Always
           ports:
             - containerPort: 5002
           env:
