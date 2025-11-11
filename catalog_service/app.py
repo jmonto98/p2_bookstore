@@ -2,6 +2,7 @@ import pika, json, threading, os
 from models import db
 from models.book import Book
 from flask import Flask, jsonify
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flasgger import Swagger
 from models import db
 from models.book import Book
@@ -9,6 +10,7 @@ from models.book import Book
 DB_URI = os.environ.get("DATABASE_URI", "mysql+pymysql://user:password@db-catalog/bookstore_catalog")
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 swagger = Swagger(app, template={
     "info": {

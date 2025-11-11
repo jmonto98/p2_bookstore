@@ -2,6 +2,7 @@ import os
 import datetime
 import jwt
 from flask import Flask, request, jsonify
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash, check_password_hash
 from flasgger import Swagger
 from models import db
@@ -11,6 +12,7 @@ from models.user import User
 #  Configuración base de la aplicación
 # ------------------------------------------------------
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 swagger = Swagger(app, template={
     "info": {

@@ -1,6 +1,7 @@
 import pika, json, os
 import requests
 from flask import Flask, jsonify, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flasgger import Swagger
 from models import db
 from models.book import Book
@@ -13,6 +14,8 @@ from models.delivery_assignment import DeliveryAssignment
 # Configuración base
 # ------------------------------------------------------
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
 Swagger(app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://user:password@db-main/bookstore_main"
