@@ -4,9 +4,10 @@ metadata:
   name: purchase-service
   namespace: bookstore
 spec:
+  type: NodePort
   selector:
     app: purchase-service
   ports:
     - port: 5003
       targetPort: 5003
-  type: ClusterIP
+      nodePort: 30003
