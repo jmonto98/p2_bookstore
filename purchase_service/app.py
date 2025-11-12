@@ -27,7 +27,7 @@ swagger = Swagger(app, template={
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://user:password@db-main/bookstore_main"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-AUTH_URL = "http://auth_service:5001/validate"
+AUTH_URL = "http://auth-service:5001/validate"
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
 
 db.init_app(app)
