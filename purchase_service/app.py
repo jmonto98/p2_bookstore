@@ -16,7 +16,14 @@ from models.delivery_assignment import DeliveryAssignment
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
-Swagger(app)
+swagger = Swagger(app, template={
+    "info": {
+        "title": "Purchase Service API",
+        "description": "Microservicio de gestión de compras, pagos y entregas",
+        "version": "2.0.0"
+    }
+})
+
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://user:password@db-main/bookstore_main"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
