@@ -67,7 +67,7 @@ La aplicación sigue el patrón **microservicios**, donde cada módulo opera de 
 ```
 
 Cada microservicio posee:
-- Archivo `Dockerfile` propio.  
+- Archivo `Dockerfile`.  
 - Archivos `deployment.yaml` y `service.yaml` en la carpeta `/k8s`.  
 - Comunicación interna mediante nombres DNS del servicio (`auth-service`, `catalog-service`, etc.).  
 
@@ -98,21 +98,19 @@ Cada microservicio posee:
 
 ```
 Bookstore/
-    ├───auth_service
-    │   └───models
-    ├───catalog_service
-    │   └───models
-    ├───k8s
-    │   ├───auth
-    │   ├───catalog
-    │   ├───databases
-    │   ├───loadbalancer
-    │   ├───purchase
-    │   ├───pv
-    │   └───rabbitmq
-    └───purchase_service
-        └───models
-
+├── auth_service
+│   └── models
+├── catalog_service
+│   └── models
+├── k8s
+│   ├── auth
+│   ├── catalog
+│   ├── databases
+│   ├── purchase
+│   ├── pv
+│   └── rabbitmq
+└── purchase_service
+    └── models
 ```
 
 ### 3.3. Ejecución local
@@ -132,7 +130,7 @@ docker build -t purchase_service ./purchase_service
 
 #### 3️ Levantar los contenedores
 ```bash
-docker-compose up
+docker-compose up -d --build
 ```
 
 #### 4️ Acceso
@@ -144,16 +142,85 @@ docker-compose up
 
 ##  4. Despliegue en AWS EKS (Kubernetes)
 
-Basado en el laboratorio **AWS EKS-est.pdf**.
+### 4.1. Arquitectura del cluster Bookstore (EKS + Kubernetes)
 
-### 4.1. Configuración inicial de EKS
+```mermaid
+graph TD
+
+    %% Namespace
+    A[Namespace: bookstore]
+
+    %% Storage
+    SC[StorageClass: efs-sc]
+    PV1[PV: pv-mysql-auth]
+    PV2[PV: pv-mysql-catalog]
+    PV3[PV: pv-mysql-main]
+    PV4[PV: pv-rabbitmq]
+    PVC1[PVC: mysql-auth-pvc]
+    PVC2[PVC: mysql-catalog-pvc]
+    PVC3[PVC: mysql-main-pvc]
+    PVC4[PVC: rabbitmq-pvc]
+
+    %% Databases
+    D1[Deployment: db-auth]
+    D2[Deployment: db-catalog]
+    D3[Deployment: db-main]
+    S1[Service: db-auth]
+    S2[Service: db-catalog]
+    S3[Service: db-main]
+
+    %% Core Services
+    AUTH[Deployment: auth-service]
+    CATALOG[Deployment: catalog-service]
+    PURCHASE[Deployment: purchase-service]
+    RABBIT[Deployment: rabbitmq]
+
+    SA[Service: auth-service]
+    SCAT[Service: catalog-service]
+    SPUR[Service: purchase-service]
+    SRAB[Service: rabbitmq]
+
+    %% Relationships
+    A --> AUTH
+    A --> CATALOG
+    A --> PURCHASE
+    A --> RABBIT
+    A --> D1
+    A --> D2
+    A --> D3
+
+    AUTH --> SA
+    CATALOG --> SCAT
+    PURCHASE --> SPUR
+    RABBIT --> SRAB
+
+    D1 --> S1
+    D2 --> S2
+    D3 --> S3
+
+    %% Volumes
+    SC --> PV1 & PV2 & PV3 & PV4
+    PV1 --> PVC1 --> D1
+    PV2 --> PVC2 --> D2
+    PV3 --> PVC3 --> D3
+    PV4 --> PVC4 --> RABBIT
+
+    %% Dependencies
+    PURCHASE --> AUTH
+    PURCHASE --> RABBIT
+    PURCHASE --> D3
+    AUTH --> D1
+    CATALOG --> D2
+```
+
+### 4.2. Configuración inicial de EKS
 
 ```bash
 aws eks update-kubeconfig --region us-east-1 --name MyEks
 kubectl get nodes
 ```
 
-### 4.2. Configurar almacenamiento EFS
+### 4.3. Configurar almacenamiento EFS
 
 1. Crear un servicio **EFS (Elastic File System)** en AWS.  
 2. Permitir puertos **NFS, HTTP, HTTPS, MySQL, SSH** en el *Security Group*.  
@@ -167,7 +234,7 @@ kubectl get nodes
 
 ---
 
-### 4.3. Desplegar los microservicios
+### 4.4. Desplegar los microservicios
 
 ```bash
 kubectl apply -f k8s/auth/
@@ -175,13 +242,13 @@ kubectl apply -f k8s/catalog/
 kubectl apply -f k8s/purchase/
 ```
 
-### 4.4. Verificar el estado
+### 4.5. Verificar el estado
 ```bash
 kubectl get pods --watch
 kubectl get all -o wide
 ```
 
-### 4.5. Escalamiento y LoadBalancer
+### 4.6. Escalamiento y LoadBalancer
 
 ```bash
 kubectl scale deployment catalog-service --replicas=2
@@ -216,10 +283,3 @@ curl -X POST http://<LOAD_BALANCER_IP>/purchase   -H "Authorization: Bearer <tok
 - Repositorio base: [https://github.com/st0263eafit/st0263-252](https://github.com/st0263eafit/st0263-252)  
 - Flask Official Docs: [https://flask.palletsprojects.com](https://flask.palletsprojects.com)  
 - AWS EKS + Helm + EFS deployment guide.  
-<!-- - Docker & Kubernetes best practices.   -->
---
-para iniciar la base de datos y crear las tablas:
-
-flask shell
->>> from extensions import db
->>> db.create_all()
